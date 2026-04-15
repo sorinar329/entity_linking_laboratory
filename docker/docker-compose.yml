@@ -6,7 +6,7 @@ services:
     image: binder-template:main # Reuses the same image built above
     build:
       context: ../
-      dockerfile: ./binder/Dockerfile
+      dockerfile: /Dockerfile
     stdin_open: true
     tty: true
     user: root
