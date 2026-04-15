@@ -70,14 +70,6 @@ def detect_objects(textprompt, image_path, threshold=0.5):
         # Draw the label and score
         draw.text((xmin, ymin), label_text, fill="red")
 
-    # Show the image with bounding boxes
-    plt.figure(figsize=(10, 10))
-    #plt.imshow(image)
-    plt.axis('off')
-    plt.title('Image with Bounding Boxes')
-    plt.show()
-
-    # Print results as well
     return results
 
 

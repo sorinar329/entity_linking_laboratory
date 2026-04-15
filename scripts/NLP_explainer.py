@@ -1,3 +1,4 @@
+import os
 import ollama
 from IPython.core.display_functions import display
 from PIL import Image, ImageDraw, ImageFont
@@ -19,27 +20,32 @@ def filter_think_part(response):
     filtered_response = filtered_response.replace("**", "")  # Remove any remaining asterisks
     return filtered_response.strip()
 
-def generate_explanation(content,llm_model=None, show_image=False):
+def generate_explanation(content, llm_model=None, show_image=False, api_url=None, api_key=None):
     """
     Generate a natural language explanation based on the provided content.
 
     Args:
-        show_image: bool: Whether to show the image with the explanation. Defaults to False.
-        llmmodel: The model to use for generating the explanation. Defaults to "deepseek-r1:7b" if None.
         content (str): The input content to be explained.
+        llm_model: The model to use for generating the explanation. Defaults to "deepseek-r1:7b" if None.
+        show_image: bool: Whether to show the image with the explanation. Defaults to False.
+        api_url (str): The URL of the LLM API.
+        api_key (str): The authorization key for the LLM API.
 
     Returns:
         str: The generated explanation.
     """
     if llm_model is None:
-        llm_model = "deepseek-r1:7b"
+        llm_model = os.getenv("LLM_MODEL", "deepseek-r1:7b")
 
-    url = "http://192.168.200.10:11434/api/chat"
+    if api_url is None:
+        api_url = os.getenv("LLM_API_URL", "http://192.168.200.10:11434/api/chat")
+
+    if api_key is None:
+        api_key = os.getenv("LLM_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJiMjYzNjU0LTk0NTgtNDgxZC1iN2IzLTgwNDNkOTBjZjllMiJ9.BdRhAJxbzN_tVcs_9xfd2ldJIprX-qD4KDwuyaKaGnQ")
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJiMjYzNjU0LTk0NTgtNDgxZC1iN2IzLTgwNDNkOTBjZjllMiJ9.BdRhAJxbzN_tVcs_9xfd2ldJIprX-qD4KDwuyaKaGnQ"
-        # If required
+        "Authorization": f"{api_key}"
     }
     # Define the system message to set the personality
     system_message = {
@@ -68,7 +74,7 @@ def generate_explanation(content,llm_model=None, show_image=False):
     print()
     # Send the chat request with the system message and user message
     #response = ollama.chat(model='deepseek-r1:14b', messages=[system_message, user_message])
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(api_url, headers=headers, json=payload)
     if response.ok:
         response = response.json()
     else:
@@ -77,7 +83,8 @@ def generate_explanation(content,llm_model=None, show_image=False):
     return filter_think_part(response['message']['content'])
 
 def provide_explanation_with_image(content, img_path):
-
+    # This function is kept for reference or standalone use, 
+    # but the Flask app uses text overlay in HTML.
     # Load image
     image = Image.open(img_path).convert("RGB")
     draw = ImageDraw.Draw(image)
@@ -124,4 +131,5 @@ def provide_explanation_with_image(content, img_path):
         draw.text((text_x, text_y), line, fill="black", font=font)
         text_y += h + 5
 
-    display(image)
+    # display(image) # Commented out for Flask environment
+    return image

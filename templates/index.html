@@ -121,6 +121,72 @@ canvas {
     font-weight: bold;
 }
 
+#detected-object {
+    margin-top: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* PR2 Panel */
+.pr2-panel {
+    text-align: center;
+}
+
+.pr2-container {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.pr2-image {
+    max-width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+#pr2-text {
+    padding: 15px;
+    font-size: 18px;
+    line-height: 1.6;
+    font-weight: normal;
+    font-style: italic; /* Cursive-ish feel */
+    color: #333;
+    overflow-y: auto;
+    text-align: left;
+    background: #fff9e6; /* Slight paper-like background for contrast when image is gone */
+    border-left: 4px solid #f0ad4e;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.pr2-container.speaking #pr2-img {
+    display: none;
+}
+
+.pr2-container.speaking #pr2-text {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 100px;
+}
+
+/* Default state (with image) */
+.pr2-container #pr2-text {
+    position: absolute;
+    left: 8%;
+    top: 24%;
+    width: 84%;
+    height: 56%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: transparent;
+    border: none;
+    margin: 0;
+}
+
 /* Result table */
 #result {
     margin-top: 20px;
@@ -163,14 +229,29 @@ tr:nth-child(even) {
 <div class="page-wrapper">
 
     <div class="info-panel">
-        <h2>How it Works</h2>
-        <p>Welcome to the Vision App. This tool allows you to interactively identify and select objects within an image. Follow these steps:</p>
-        <ol>
-            <li><strong>Upload an Image:</strong> Click "Choose File" to upload your own picture, or click "Use Sample Image" to test the tool with a default picture.</li>
-            <li><strong>Automatic Detection:</strong> Once loaded, the system will process the image and draw green bounding boxes around all detected objects.</li>
-            <li><strong>Select an Object:</strong> Click anywhere on the image. The app will capture your exact coordinates.</li>
-            <li><strong>View the Results:</strong> The object you clicked will be highlighted with a red box, and detailed processing steps will appear in the table below the image.</li>
-        </ol>
+        <div id="pr2-panel" class="pr2-panel">
+            <button id="explain-btn" onclick="askPR2()" style="display: none; margin-bottom: 15px; background: #28a745; width: 100%;">Ask the PR2 to explain it</button>
+            <button id="show-pr2-btn" onclick="restorePR2()" style="display: none; margin-bottom: 15px; background: #6c757d; width: 100%;">Show PR2 Robot</button>
+            <div id="pr2-container" class="pr2-container">
+                <img id="pr2-img" class="pr2-image" src="/models/images/pr2_introducing.png">
+                <div id="pr2-text"></div>
+            </div>
+        </div>
+
+        <div id="how-it-works-toggle" style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px;">
+            <button id="toggle-guide-btn" onclick="toggleGuide()" style="background: #6c757d; width: 100%; margin-left: 0;">Show Guide</button>
+        </div>
+
+        <div id="how-it-works" style="display: none; margin-top: 15px;">
+            <h2>How it Works</h2>
+            <p>Welcome to the Vision App. This tool allows you to interactively identify and select objects within an image. Follow these steps:</p>
+            <ol>
+                <li><strong>Upload an Image:</strong> Click "Choose File" to upload your own picture, or click "Use Sample Image" to test the tool with a default picture.</li>
+                <li><strong>Automatic Detection:</strong> Once loaded, the system will process the image and draw green bounding boxes around all detected objects.</li>
+                <li><strong>Select an Object:</strong> Click anywhere on the image. The app will capture your exact coordinates.</li>
+                <li><strong>View the Results:</strong> The object you clicked will be highlighted with a red box, and detailed processing steps will appear in the table below the image.</li>
+            </ol>
+        </div>
     </div>
 
     <div id="app">
@@ -189,6 +270,7 @@ tr:nth-child(even) {
         </div>
 
         <p id="coords"></p>
+        <p id="detected-object"></p>
 
         <div id="result"></div>
     </div>
@@ -219,6 +301,7 @@ document.getElementById("upload").addEventListener("change", function() {
     .then(data => {
         filename = data.filename;
         img.src = data.url;
+        resetPR2();
     });
 });
 
@@ -231,7 +314,49 @@ function useSample() {
     .then(data => {
         filename = data.filename;
         img.src = data.url;
+        resetPR2();
     });
+}
+
+function resetPR2() {
+    document.getElementById("detected-object").innerText = "";
+    document.getElementById("explain-btn").style.display = "none";
+    document.getElementById("show-pr2-btn").style.display = "none";
+    document.getElementById("pr2-container").classList.remove("speaking");
+    document.getElementById("pr2-img").src = "/models/images/pr2_introducing.png";
+    document.getElementById("pr2-text").innerText = "";
+}
+
+function restorePR2() {
+    document.getElementById("show-pr2-btn").style.display = "none";
+    document.getElementById("pr2-container").classList.remove("speaking");
+    document.getElementById("pr2-img").src = "/models/images/pr2_introducing.png";
+    document.getElementById("pr2-text").innerText = "";
+    // If we have a label, show the explain button again
+    const label = document.getElementById("explain-btn").getAttribute("data-label");
+    if (label && label !== "None") {
+        document.getElementById("explain-btn").style.display = "inline-block";
+    }
+}
+
+function showPR2() {
+    // PR2 is now always visible on top
+}
+
+function showInstructions() {
+    // Instructions are now toggled by toggleGuide()
+}
+
+function toggleGuide() {
+    const guide = document.getElementById("how-it-works");
+    const btn = document.getElementById("toggle-guide-btn");
+    if (guide.style.display === "none") {
+        guide.style.display = "block";
+        btn.innerText = "Hide Guide";
+    } else {
+        guide.style.display = "none";
+        btn.innerText = "Show Guide";
+    }
 }
 
 // =============================
@@ -319,8 +444,53 @@ canvas.onclick = function(event) {
 
         drawBoxes(data.selected_box);
         showResult(data.steps);
+
+        if (data.label && data.label !== "None") {
+            document.getElementById("detected-object").innerText = "Detected Object: " + data.label;
+            document.getElementById("explain-btn").style.display = "inline-block";
+            document.getElementById("explain-btn").setAttribute("data-label", data.label);
+            showPR2();
+        } else {
+            document.getElementById("detected-object").innerText = "No object detected here.";
+            document.getElementById("explain-btn").style.display = "none";
+        }
     });
 };
+
+// =============================
+// Ask PR2
+// =============================
+function askPR2() {
+    const label = document.getElementById("explain-btn").getAttribute("data-label");
+    const pr2Img = document.getElementById("pr2-img");
+    const pr2Text = document.getElementById("pr2-text");
+    const pr2Container = document.getElementById("pr2-container");
+    const explainBtn = document.getElementById("explain-btn");
+    const showPr2Btn = document.getElementById("show-pr2-btn");
+
+    explainBtn.style.display = "none";
+    pr2Img.src = "/models/images/pr2_thinking.png";
+    pr2Text.innerText = "";
+    pr2Container.classList.remove("speaking");
+
+    fetch("explain", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ label: label })
+    })
+    .then(res => res.json())
+    .then(data => {
+        pr2Container.classList.add("speaking");
+        pr2Text.innerText = data.explanation;
+        showPr2Btn.style.display = "inline-block";
+    })
+    .catch(err => {
+        console.error(err);
+        pr2Img.src = "/models/images/pr2_introducing.png";
+        pr2Text.innerText = "Sorry, I couldn't get an explanation right now.";
+        explainBtn.style.display = "inline-block";
+    });
+}
 
 // =============================
 // Show steps

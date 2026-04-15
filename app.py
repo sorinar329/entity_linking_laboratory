@@ -1,6 +1,6 @@
 import os
 import sys
-from flask import Flask, render_template, request, jsonify, url_for
+from flask import Flask, render_template, request, jsonify, url_for, send_from_directory
 
 # =============================
 # Setup project paths
@@ -102,16 +102,59 @@ def click():
             break
 
     # run your original logic
-    clicked_obj = pipeline.get_clicked_obj(img_path, x, y)
+    clicked_objs = pipeline.get_clicked_obj(img_path, x, y)
+    
+    if not clicked_objs:
+        return jsonify({
+            "steps": [],
+            "selected_box": selected_box,
+            "boxes": boxes,
+            "label": "None"
+        })
+
+    clicked_obj = clicked_objs[0]
+    label = clicked_obj.name.split("/")[-1] # Simple way to get the label for now
 
     verb = "cut:Quartering"
-    steps = cutting.build_motion_table(clicked_obj[0], verb)
+    steps = cutting.build_motion_table(clicked_obj, verb)
 
     return jsonify({
         "steps": steps.to_dict(orient="records"),
         "selected_box": selected_box,
-        "boxes": boxes
+        "boxes": boxes,
+        "label": label
     })
+
+
+# =============================
+# Explain with PR2
+# =============================
+@app.route("/explain", methods=["POST"])
+def explain():
+    data = request.get_json()
+    label = data["label"]
+    
+    # We need to find the object concept for this label
+    # This is a bit tricky if we only have the label.
+    # Ideally we'd pass the object ID.
+    
+    # For now, let's assume we can find it by name or just use the label to explain.
+    # The pipeline.provide_explanation expects a clicked_obj (list of concepts).
+    
+    # Let's just use the label for now as a mock or find it.
+    explanation = pipeline.generate_explanation_for_label(label)
+    
+    return jsonify({
+        "explanation": explanation
+    })
+
+
+# =============================
+# Serve static images from models (fallback)
+# =============================
+@app.route("/models/images/<path:filename>")
+def models_images(filename):
+    return send_from_directory(os.path.join("models", "images"), filename)
 
 
 # =============================

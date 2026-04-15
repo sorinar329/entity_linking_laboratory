@@ -1,5 +1,6 @@
 import scripts.detection_concepts as detection_concepts
 import scripts.ontology_concepts as ontology_concepts
+import scripts.NLP_explainer as NLP_explainer
 
 from owlready2 import *
 
@@ -102,10 +103,68 @@ def get_clicked_obj(img_path, x, y):
 
 
 def provide_explanation(clicked_obj, llm_model=None):
-    explanation = NLP_explainer.generate_explanation(clicked_obj[0], llm_model=llm_model)
+    if isinstance(clicked_obj[0], str):
+        content = clicked_obj[0]
+    else:
+        content = clicked_obj[0]
+    
+    try:
+        explanation = NLP_explainer.generate_explanation(content, llm_model=llm_model)
+    except Exception as e:
+        print(f"Error generating AI explanation: {e}")
+        # Use the name of the object if possible
+        label = content.name if hasattr(content, 'name') else str(content)
+        explanation = generate_fallback_explanation(label)
 
-    return NLP_explainer.provide_explanation_with_image(explanation,
-                                                        pr2_imagepth)
+    return explanation
+
+def generate_explanation_for_label(label, llm_model=None):
+    # This is a bit of a hack to work with the name/label.
+    # In a real scenario we'd pass the actual concept.
+    # But for now, we'll just explain based on label.
+    try:
+        explanation = NLP_explainer.generate_explanation(label, llm_model=llm_model)
+    except Exception as e:
+        print(f"Error generating AI explanation: {e}")
+        # Hardcoded fallback
+        explanation = generate_fallback_explanation(label)
+    return explanation
+
+def generate_fallback_explanation(label):
+    # Find the concept for the label to get attributes
+    concept = None
+    for leaf in leaf_classes:
+        # Check if the label matches the class name or the label
+        # leaf.name often contains "FOODON_..." or "SOMA_..." but sometimes it's clean.
+        # Let's check both the full name and the part after the underscore.
+        leaf_name = leaf.name.split("/")[-1]
+        
+        # If label is "Apple" and leaf.label is "Apple", it should match.
+        # leaf.label is a list of locstr.
+        leaf_label_strs = [str(l) for l in leaf.label]
+        
+        if label.lower() == leaf_name.lower() or any(label.lower() == ls.lower() for ls in leaf_label_strs):
+            concept = ontology_concepts.get_food_concept(leaf)
+            break
+    
+    if not concept:
+        return f"This is a {label}. I don't have much information about how to process it specifically, but we can try to cut it if needed."
+
+    parts = []
+    if concept.peel_must_be_removed or concept.peel_should_be_removed:
+        parts.append("The peel has to be removed before cutting.")
+    if concept.core_must_be_removed or concept.core_should_be_removed:
+        parts.append("The core should be removed as well.")
+    if concept.stem_must_be_removed or concept.stem_should_be_removed:
+        parts.append("Don't forget to remove the stem.")
+    
+    if not parts:
+        if concept.can_be_cut:
+            return f"This {label} is ready to be cut and doesn't require any special preparation like peeling."
+        else:
+            return f"This is a {label}. It seems it's usually not something we cut in this way."
+
+    return f"To prepare this {label}: " + " ".join(parts)
 
 def get_boxes_only(img_path):
     results = get_bboxes(img_path)

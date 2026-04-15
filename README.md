@@ -17,7 +17,7 @@ An interactive tool for grounding semantic concepts from ontologies into real-wo
 ## 📸 Screenshots
 
 <!-- Placeholder for a main app screenshot -->
-![Main Interface](static/images/screenshot_main.png)
+![Main Interface](static/images/overview_image.png)
 *Example of the main interface showing object detection and semantic linking.*
 
 ---
@@ -43,7 +43,16 @@ The easiest way to get started is using Docker Compose.
    cd entity_linking_laboratory
    ```
 
-2. **Run Docker Compose**:
+2. **Set up Environment Variables (Optional)**:
+   Create a `.env` file in the root or export them in your shell if you want to use the AI explanation feature with your own API:
+   ```bash
+   export LLM_API_URL="your-api-url"
+   export LLM_API_KEY="your-api-key"
+   export LLM_MODEL="your-model-name"
+   ```
+   *If no API key is provided, the PR2 will use hardcoded ontological rules to provide explanations.*
+
+3. **Run Docker Compose**:
    ```bash
    cd docker
    docker compose up --build
