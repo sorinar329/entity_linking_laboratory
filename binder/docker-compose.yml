@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # New service for your Flask app
+  vision-app:
+    image: binder-template:main # Reuses the same image built above
+    build:
+      context: ../
+      dockerfile: ./binder/Dockerfile
+    stdin_open: true
+    tty: true
+    user: root
+    working_dir: /home/repo
+    command: python app.py
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../:/home/repo:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+              - driver: nvidia
+                count: all
+                capabilities: [gpu]
